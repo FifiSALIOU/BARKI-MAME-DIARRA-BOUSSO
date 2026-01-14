@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Clock3, Users, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, LayoutDashboard, Bell, Search, Clock, Monitor, Wrench, Forward, AlertTriangle } from "lucide-react";
+import { Clock3, Users, CheckCircle2, ChevronRight, ChevronLeft, ChevronDown, LayoutDashboard, Bell, Search, Clock, Monitor, Wrench, Forward, AlertTriangle, BarChart3 } from "lucide-react";
 import helpdeskLogo from "../assets/helpdesk-logo.png";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -2875,12 +2875,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
             }}
           >
             <div style={{ width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke={activeSection === "reports" ? "white" : "rgba(180, 180, 180, 0.7)"} />
-                <rect x="6" y="10" width="3" height="11" fill={activeSection === "reports" ? "white" : "rgba(180, 180, 180, 0.7)"} />
-                <rect x="10.5" y="6" width="3" height="15" fill={activeSection === "reports" ? "white" : "rgba(180, 180, 180, 0.7)"} />
-                <rect x="15" y="16" width="3" height="5" fill={activeSection === "reports" ? "white" : "rgba(180, 180, 180, 0.7)"} />
-              </svg>
+              <BarChart3 size={20} color={activeSection === "reports" ? "white" : "rgba(180, 180, 180, 0.7)"} strokeWidth={2.5} />
             </div>
             <div style={{ fontSize: "16px", fontFamily: "'Inter', system-ui, sans-serif", fontWeight: "500" }}>Statistiques</div>
           </div>
