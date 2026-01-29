@@ -542,6 +542,23 @@ function DSIDashboard({ token }: DSIDashboardProps) {
   const [newType, setNewType] = useState({ type: "", description: "", color: "#007bff", is_active: true });
   const [loadingTypes, setLoadingTypes] = useState(false);
   
+  // États pour la section Catégories (données depuis l'API)
+  const [categoriesList, setCategoriesList] = useState<Array<{
+    id: number;
+    name: string;
+    description?: string | null;
+    type_code: string;
+    is_active: boolean;
+  }>>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [categoriesTypes, setCategoriesTypes] = useState<Array<{
+    id: number;
+    code: string;
+    label: string;
+    is_active: boolean;
+  }>>([]);
+  const [expandedCategoryType, setExpandedCategoryType] = useState<string | null>(null);
+  
   // États pour les priorités
   const [priorities, setPriorities] = useState<Array<{
     id: number;
@@ -1666,6 +1683,38 @@ function DSIDashboard({ token }: DSIDashboardProps) {
         }
       }
       void loadTicketTypes();
+    }
+  }, [activeSection, userRole, token]);
+
+  // Charger types et catégories pour la section Catégories (admin)
+  useEffect(() => {
+    if (activeSection === "categories" && userRole === "Admin" && token) {
+      async function loadCategoriesData() {
+        setLoadingCategories(true);
+        try {
+          const [typesRes, categoriesRes] = await Promise.all([
+            fetch("http://localhost:8000/ticket-config/types", {
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+            fetch("http://localhost:8000/ticket-config/categories", {
+              headers: { Authorization: `Bearer ${token}` },
+            }),
+          ]);
+          if (typesRes.ok) {
+            const typesData = await typesRes.json();
+            setCategoriesTypes(typesData);
+          }
+          if (categoriesRes.ok) {
+            const categoriesData = await categoriesRes.json();
+            setCategoriesList(categoriesData);
+          }
+        } catch (err) {
+          console.error("Erreur chargement catégories:", err);
+        } finally {
+          setLoadingCategories(false);
+        }
+      }
+      void loadCategoriesData();
     }
   }, [activeSection, userRole, token]);
 
@@ -11276,12 +11325,133 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
           })()}
 
           {activeSection === "categories" && userRole === "Admin" && (
-            <div style={{ padding: "24px", background: "white" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-                <FolderTree size={24} color="hsl(220, 15%, 45%)" />
-                <h1 style={{ fontSize: "24px", fontWeight: 600, color: "hsl(220, 15%, 45%)", margin: 0 }}>Catégories</h1>
+            <div style={{ padding: "24px", background: "hsl(210, 20%, 98%)", minHeight: "100%" }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <Layers size={20} color="hsl(220, 15%, 45%)" />
+                  <h1 style={{ fontSize: "16px", fontWeight: 500, color: "hsl(220, 15%, 45%)", margin: 0, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                    Catégories et sous-catégories
+                  </h1>
+                </div>
+                <button
+                  type="button"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "10px 20px",
+                    backgroundColor: "hsl(25, 95%, 53%)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontSize: "16px",
+                    fontWeight: 500,
+                    fontFamily: "system-ui, -apple-system, sans-serif",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+                  }}
+                >
+                  <Plus size={20} />
+                  Nouvelle catégorie
+                </button>
               </div>
-              <p style={{ color: "hsl(var(--muted-foreground))", margin: 0 }}>Gestion des catégories de tickets.</p>
+
+              {/* Liste accordéon par type */}
+              {loadingCategories ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "hsl(220, 15%, 45%)" }}>Chargement des catégories...</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {categoriesTypes.map((typeItem) => {
+                    const count = categoriesList.filter((c) => c.type_code === typeItem.code).length;
+                    const isMateriel = typeItem.code === "materiel" || typeItem.label.toLowerCase().includes("matériel") || typeItem.label.toLowerCase().includes("materiel");
+                    const isApplicatif = typeItem.code === "applicatif" || typeItem.label.toLowerCase().includes("applicatif");
+                    const isExpanded = expandedCategoryType === typeItem.code;
+                    const subCategories = categoriesList.filter((c) => c.type_code === typeItem.code);
+                    return (
+                      <div
+                        key={typeItem.id}
+                        style={{
+                          background: "white",
+                          borderRadius: "0.75rem",
+                          border: "1px solid hsl(220, 20%, 90%)",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                          overflow: "hidden"
+                        }}
+                      >
+                        <div
+                          onClick={() => setExpandedCategoryType(isExpanded ? null : typeItem.code)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            padding: "16px 20px",
+                            cursor: "pointer"
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            {isMateriel ? (
+                              <Wrench size={20} color="hsl(25, 95%, 53%)" />
+                            ) : (
+                              <Monitor size={20} color="hsl(25, 95%, 53%)" />
+                            )}
+                          </div>
+                          <span style={{ fontSize: "16px", fontWeight: 500, color: "#111827", fontFamily: "system-ui, -apple-system, sans-serif", flex: 1 }}>
+                            {typeItem.label}
+                          </span>
+                          <span
+                            style={{
+                              minWidth: "24px",
+                              height: "24px",
+                              borderRadius: "9999px",
+                              backgroundColor: "hsl(25, 95%, 53%)",
+                              color: "white",
+                              fontSize: "14px",
+                              fontWeight: 500,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "0 8px"
+                            }}
+                          >
+                            {count}
+                          </span>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              transition: "transform 0.2s ease",
+                              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)"
+                            }}
+                          >
+                            <ChevronDown size={20} color="hsl(220, 15%, 45%)" />
+                          </div>
+                        </div>
+                        {isExpanded && subCategories.length > 0 && (
+                          <div style={{ borderTop: "1px solid hsl(220, 20%, 90%)", padding: "12px 20px 16px", background: "hsl(210, 20%, 98%)" }}>
+                            <ul style={{ margin: 0, paddingLeft: "20px", listStyle: "disc" }}>
+                              {subCategories.map((cat) => (
+                                <li key={cat.id} style={{ fontSize: "14px", color: "#374151", marginBottom: "4px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+                                  {cat.name}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {isExpanded && subCategories.length === 0 && (
+                          <div style={{ borderTop: "1px solid hsl(220, 20%, 90%)", padding: "12px 20px 16px", background: "hsl(210, 20%, 98%)", color: "hsl(220, 15%, 45%)", fontSize: "14px" }}>
+                            Aucune sous-catégorie
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {categoriesTypes.length === 0 && !loadingCategories && (
+                    <div style={{ textAlign: "center", padding: "40px", color: "hsl(220, 15%, 45%)" }}>Aucun type de ticket. Ajoutez des types dans la section Types.</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
