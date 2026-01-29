@@ -11327,13 +11327,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
           {activeSection === "categories" && userRole === "Admin" && (
             <div style={{ padding: "24px", background: "hsl(210, 20%, 98%)", minHeight: "100%" }}>
               {/* Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <Layers size={20} color="hsl(220, 15%, 45%)" />
-                  <h1 style={{ fontSize: "16px", fontWeight: 500, color: "hsl(220, 15%, 45%)", margin: 0, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                    Catégories et sous-catégories
-                  </h1>
-                </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: "24px" }}>
                 <button
                   type="button"
                   style={{
