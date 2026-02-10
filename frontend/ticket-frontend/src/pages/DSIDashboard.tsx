@@ -10083,19 +10083,37 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
                           display: "flex",
                           alignItems: "center",
                           gap: "6px",
-                          backgroundColor: isWarrantyExpiring
-                            ? "rgba(249,115,22,0.12)"
-                            : "#f3f4f6",
-                          color: isWarrantyExpiring
-                            ? "#c2410c"
-                            : "#4b5563",
+                          // Bandeau orange doux si la garantie expire bientôt
+                          // OU si le statut de l'actif est critique / important
+                          backgroundColor:
+                            isWarrantyExpiring ||
+                            asset.statut === "en_panne" ||
+                            asset.statut === "in_service" ||
+                            asset.statut === "en_maintenance" ||
+                            asset.statut === "reformes"
+                              ? "rgba(249, 115, 22, 0.1)" // bg-orange-500/10
+                              : "#f3f4f6",
+                          color:
+                            isWarrantyExpiring ||
+                            asset.statut === "en_panne" ||
+                            asset.statut === "in_service" ||
+                            asset.statut === "en_maintenance" ||
+                            asset.statut === "reformes"
+                              ? "#ea580c" // text-orange-600
+                              : "#4b5563",
                           fontSize: "12px",
                         }}
                       >
                         <Calendar
                           size={16}
                           color={
-                            isWarrantyExpiring ? "#ea580c" : "#6b7280"
+                            isWarrantyExpiring ||
+                            asset.statut === "en_panne" ||
+                            asset.statut === "in_service" ||
+                            asset.statut === "en_maintenance" ||
+                            asset.statut === "reformes"
+                              ? "#ea580c"
+                              : "#6b7280"
                           }
                         />
                         <span>
