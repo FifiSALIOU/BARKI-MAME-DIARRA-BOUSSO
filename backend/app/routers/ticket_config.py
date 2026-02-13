@@ -14,20 +14,47 @@ router = APIRouter(prefix="/ticket-config", tags=["ticket-config"])
 
 @router.get("/priorities", response_model=List[schemas.PriorityConfig])
 def get_priorities(
+    all: bool = Query(False, description="Si True (admin), retourne toutes les priorités y compris inactives"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     """
     Récupère la liste des priorités configurées dans la base (table priorities).
-    Les tickets continuent d'utiliser la colonne priority (enum) ; cette liste sert de référence (libellés, couleurs).
+    Par défaut retourne uniquement les priorités actives ; avec ?all=true retourne toutes (pour l'admin).
     """
-    priorities = (
-        db.query(models.Priority)
-        .filter(models.Priority.is_active.is_(True))
-        .order_by(models.Priority.display_order.asc(), models.Priority.id.asc())
-        .all()
+    query = db.query(models.Priority).order_by(
+        models.Priority.display_order.asc(), models.Priority.id.asc()
     )
+    if not all:
+        query = query.filter(models.Priority.is_active.is_(True))
+    priorities = query.all()
     return priorities
+
+
+@router.patch("/priorities/{priority_id}", response_model=schemas.PriorityConfig)
+def update_priority(
+    priority_id: int,
+    body: schemas.PriorityUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Met à jour une priorité (is_active, label, couleurs, display_order)."""
+    priority = db.query(models.Priority).filter(models.Priority.id == priority_id).first()
+    if not priority:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Priorité introuvable")
+    if body.is_active is not None:
+        priority.is_active = body.is_active
+    if body.label is not None:
+        priority.label = body.label.strip()
+    if body.color_hex is not None:
+        priority.color_hex = body.color_hex.strip() or None
+    if body.background_hex is not None:
+        priority.background_hex = body.background_hex.strip() or None
+    if body.display_order is not None:
+        priority.display_order = body.display_order
+    db.commit()
+    db.refresh(priority)
+    return priority
 
 
 @router.get("/types", response_model=List[schemas.TicketTypeConfig])

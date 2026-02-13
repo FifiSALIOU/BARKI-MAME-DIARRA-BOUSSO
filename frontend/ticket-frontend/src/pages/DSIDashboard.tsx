@@ -1045,6 +1045,26 @@ function DSIDashboard({ token }: DSIDashboardProps) {
       { id: 4, priority: "Basse", level: 4, color: "#28a745", maxTime: "3 jours", maxTimeValue: 3, maxTimeUnit: "jours" }
     ];
   });
+  const [prioritiesFromDb, setPrioritiesFromDb] = useState<Array<{
+    id: number;
+    code: string;
+    label: string;
+    color_hex: string | null;
+    background_hex: string | null;
+    display_order: number;
+    is_active: boolean;
+  }>>([]);
+  const [loadingPrioritiesFromDb, setLoadingPrioritiesFromDb] = useState(false);
+  const [editingPriorityFromDb, setEditingPriorityFromDb] = useState<{
+    id: number;
+    code: string;
+    label: string;
+    color_hex: string | null;
+    background_hex: string | null;
+    display_order: number;
+    is_active: boolean;
+  } | null>(null);
+  const [editPriorityForm, setEditPriorityForm] = useState({ label: "", color_hex: "", background_hex: "" });
   const [showAddPriorityModal, setShowAddPriorityModal] = useState(false);
   const [editingPriority, setEditingPriority] = useState<number | null>(null);
   const [newPriority, setNewPriority] = useState({ 
@@ -1989,21 +2009,6 @@ function DSIDashboard({ token }: DSIDashboardProps) {
     alert("Priorité ajoutée avec succès !");
   };
 
-  const handleEditPriority = (priorityId: number) => {
-    const priority = priorities.find(p => p.id === priorityId);
-    if (priority) {
-      setNewPriority({ 
-        priority: priority.priority, 
-        level: priority.level, 
-        color: priority.color, 
-        maxTimeValue: priority.maxTimeValue, 
-        maxTimeUnit: priority.maxTimeUnit 
-      });
-      setEditingPriority(priorityId);
-      setShowAddPriorityModal(true);
-    }
-  };
-
   const handleUpdatePriority = () => {
     if (!newPriority.priority.trim()) {
       alert("Veuillez remplir tous les champs");
@@ -2019,28 +2024,6 @@ function DSIDashboard({ token }: DSIDashboardProps) {
     setEditingPriority(null);
     setShowAddPriorityModal(false);
     alert("Priorité modifiée avec succès !");
-  };
-
-  const handleDeletePriority = (priorityId: number) => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer cette priorité ?")) {
-      const updatedPriorities = priorities.filter(p => p.id !== priorityId);
-      setPriorities(updatedPriorities);
-      localStorage.setItem("priorities", JSON.stringify(updatedPriorities));
-      alert("Priorité supprimée avec succès !");
-    }
-  };
-
-  const getPriorityColorName = (color: string) => {
-    const colorMap: { [key: string]: string } = {
-      "#dc3545": "Rouge",
-      "#ff9800": "Orange",
-      "#ffc107": "Jaune",
-      "#28a745": "Vert",
-      "#007bff": "Bleu",
-      "#6c757d": "Gris",
-      "#9c27b0": "Violet"
-    };
-    return colorMap[color] || "Personnalisé";
   };
 
   // Fonction pour sauvegarder les paramètres de sécurité
@@ -2361,6 +2344,27 @@ function DSIDashboard({ token }: DSIDashboardProps) {
     }
     void loadCategoriesData();
   }, [activeSection, userRole, token]);
+
+  const loadPrioritiesFromDb = async () => {
+    if (!token) return;
+    setLoadingPrioritiesFromDb(true);
+    try {
+      const res = await fetch("http://localhost:8000/ticket-config/priorities?all=true", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = res.ok ? await res.json() : [];
+      setPrioritiesFromDb(Array.isArray(data) ? data : []);
+    } catch {
+      setPrioritiesFromDb([]);
+    } finally {
+      setLoadingPrioritiesFromDb(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!token || activeSection !== "priorites") return;
+    loadPrioritiesFromDb();
+  }, [activeSection, token]);
 
   // Charger types et catégories quand le modal de création de ticket s'ouvre (DSI et Admin)
   useEffect(() => {
@@ -17585,139 +17589,306 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
                  Priorités
                </h1>
 
-               {/* Bouton Ajouter */}
-               <div style={{ marginBottom: "24px" }}>
-                 <button
-                   onClick={() => {
-                     setNewPriority({ priority: "", level: 1, color: "#dc3545", maxTimeValue: 1, maxTimeUnit: "heure" });
-                     setEditingPriority(null);
-                     setShowAddPriorityModal(true);
-                   }}
-                   style={{
-                     padding: "10px 20px",
-                     backgroundColor: "white",
-                     color: "#007bff",
-                     border: "1px solid #007bff",
-                     borderRadius: "4px",
-                     cursor: "pointer",
-                     fontSize: "14px",
-                     fontWeight: "500"
-                   }}
-                 >
-                   [+ Ajouter une priorité]
-                 </button>
-               </div>
-
-               {/* Tableau des priorités */}
-               <div style={{ 
-                 background: "white", 
-                 borderRadius: "8px", 
-                 boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                 overflow: "hidden"
+               {/* Tableau des priorités (design: Nom, Libellé, Couleur, SLA, Actif) */}
+               <div style={{
+                 background: "white",
+                 borderRadius: "8px",
+                 boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                 overflow: "hidden",
+                 border: "1px solid #e5e7eb"
                }}>
-                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                   <thead>
-                     <tr style={{ background: "#f8f9fa", borderBottom: "2px solid #dee2e6" }}>
-                       <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#333", borderBottom: "1px solid #dee2e6" }}>Priorité</th>
-                       <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#333", borderBottom: "1px solid #dee2e6" }}>Niveau</th>
-                       <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#333", borderBottom: "1px solid #dee2e6" }}>Couleur</th>
-                       <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#333", borderBottom: "1px solid #dee2e6" }}>Temps Max</th>
-                       <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#333", borderBottom: "1px solid #dee2e6" }}>Actions</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     {priorities.map((priority) => (
-                       <tr key={priority.id} style={{ borderBottom: "1px solid #dee2e6" }}>
-                         <td style={{ padding: "12px 16px", color: "#333" }}>{priority.priority}</td>
-                         <td style={{ padding: "12px 16px", color: "#007bff", fontWeight: "500" }}>{priority.level}</td>
-                         <td style={{ padding: "12px 16px" }}>
-                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                             <div style={{
-                               width: "20px",
-                               height: "20px",
-                               borderRadius: "50%",
-                               backgroundColor: priority.color,
-                               border: "1px solid #ddd"
-                             }}></div>
-                             <span style={{ color: "#333" }}>{getPriorityColorName(priority.color)}</span>
-                           </div>
-                         </td>
-                         <td style={{ padding: "12px 16px" }}>
-                           <span style={{ color: "#333" }}>
-                             <span style={{ color: "#007bff", fontWeight: "500" }}>{priority.maxTimeValue}</span> {priority.maxTimeUnit}
-                           </span>
-                         </td>
-                         <td style={{ padding: "12px 16px" }}>
-                           <div style={{ display: "flex", gap: "12px" }}>
-                             <button
-                               onClick={() => handleEditPriority(priority.id)}
-                               style={{
-                                 padding: "0",
-                                 backgroundColor: "transparent",
-                                 border: "none",
-                                 cursor: "pointer",
-                                 display: "flex",
-                                 alignItems: "center",
-                                 justifyContent: "center",
-                                 width: "28px",
-                                 height: "28px"
-                               }}
-                               title="Modifier"
-                             >
-                               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                                 {/* Crayon jaune */}
-                                 <path d="M6 22L2 18L10 10L14 14L6 22Z" fill="#ffc107" stroke="#d4a574" strokeWidth="0.8"/>
-                                 <path d="M2 18L6 22L2 22L2 18Z" fill="#d4a574"/>
-                                 <path d="M10 10L14 14L10 14L10 10Z" fill="#ffeb3b"/>
-                                 <path d="M2 18L6 22L2 22Z" fill="#757575"/>
-                                 <rect x="20" y="2" width="4" height="4" rx="0.5" fill="#ffb3d9" stroke="#ff91c7" strokeWidth="0.5"/>
-                                 <rect x="19" y="5" width="6" height="1.5" fill="#87ceeb"/>
-                               </svg>
-                             </button>
-                             <button
-                               onClick={() => handleDeletePriority(priority.id)}
-                               style={{
-                                 padding: "0",
-                                 backgroundColor: "transparent",
-                                 border: "none",
-                                 cursor: "pointer",
-                                 display: "flex",
-                                 alignItems: "center",
-                                 justifyContent: "center",
-                                 width: "28px",
-                                 height: "28px"
-                               }}
-                               title="Supprimer"
-                             >
-                               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                                 {/* Poubelle bleue claire avec motif grille */}
-                                 <rect x="7" y="6" width="14" height="16" rx="1.5" fill="#87ceeb" stroke="#5ba3d4" strokeWidth="1.2"/>
-                                 <line x1="10" y1="8" x2="10" y2="20" stroke="#5ba3d4" strokeWidth="0.6" opacity="0.7"/>
-                                 <line x1="14" y1="8" x2="14" y2="20" stroke="#5ba3d4" strokeWidth="0.6" opacity="0.7"/>
-                                 <line x1="18" y1="8" x2="18" y2="20" stroke="#5ba3d4" strokeWidth="0.6" opacity="0.7"/>
-                                 <line x1="8" y1="10" x2="20" y2="10" stroke="#5ba3d4" strokeWidth="0.6" opacity="0.7"/>
-                                 <line x1="8" y1="13" x2="20" y2="13" stroke="#5ba3d4" strokeWidth="0.6" opacity="0.7"/>
-                                 <line x1="8" y1="16" x2="20" y2="16" stroke="#5ba3d4" strokeWidth="0.6" opacity="0.7"/>
-                                 <line x1="8" y1="19" x2="20" y2="19" stroke="#5ba3d4" strokeWidth="0.6" opacity="0.7"/>
-                                 <rect x="9" y="3" width="10" height="3" rx="0.5" fill="#5ba3d4"/>
-                               </svg>
-                             </button>
-                           </div>
-                         </td>
+                 {loadingPrioritiesFromDb ? (
+                   <div style={{ padding: "40px", textAlign: "center", color: "#6b7280", fontSize: "14px" }}>
+                     Chargement des priorités...
+                   </div>
+                 ) : (
+                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                     <thead>
+                       <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                         <th style={{ width: "44px", padding: "12px 8px", textAlign: "center", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}></th>
+                         <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}>Nom</th>
+                         <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}>Libellé</th>
+                         <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}>Couleur</th>
+                         <th style={{ padding: "12px 16px", textAlign: "left", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}>SLA (heures)</th>
+                         <th style={{ padding: "12px 16px", textAlign: "center", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}>Actif</th>
+                         <th style={{ padding: "12px 16px", textAlign: "center", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}>Actions</th>
                        </tr>
-                     ))}
-                   </tbody>
-                 </table>
+                     </thead>
+                     <tbody>
+                       {prioritiesFromDb.map((p) => {
+                         const bgHex = p.background_hex || p.color_hex || "#f3f4f6";
+                         const textHex = p.color_hex || "#374151";
+                         const slaHours = { 1: 24, 2: 48, 3: 72, 4: 96 }[p.display_order] ?? "—";
+                         return (
+                           <tr key={p.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                             <td style={{ padding: "12px 8px", textAlign: "center", verticalAlign: "middle" }}>
+                               <span style={{ color: "#9ca3af", cursor: "default", display: "inline-flex" }} aria-hidden>
+                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/></svg>
+                               </span>
+                             </td>
+                             <td style={{ padding: "12px 16px" }}>
+                               <span style={{
+                                 display: "inline-block",
+                                 padding: "4px 10px",
+                                 borderRadius: "9999px",
+                                 background: "#f3f4f6",
+                                 color: "#6b7280",
+                                 fontSize: "13px",
+                                 fontWeight: "500"
+                               }}>
+                                 {p.code}
+                               </span>
+                             </td>
+                             <td style={{ padding: "12px 16px", fontWeight: "600", color: "#111827" }}>{p.label}</td>
+                             <td style={{ padding: "12px 16px" }}>
+                               <span style={{
+                                 display: "inline-block",
+                                 padding: "6px 12px",
+                                 borderRadius: "6px",
+                                 background: bgHex,
+                                 color: textHex,
+                                 fontSize: "13px",
+                                 fontWeight: "600"
+                               }}>
+                                 {p.label}
+                               </span>
+                             </td>
+                             <td style={{ padding: "12px 16px", color: "#9ca3af", fontSize: "14px" }}>{slaHours}</td>
+                             <td style={{ padding: "12px 16px", textAlign: "center", verticalAlign: "middle" }}>
+                               <button
+                                 type="button"
+                                 role="switch"
+                                 aria-checked={p.is_active}
+                                 onClick={async () => {
+                                   const res = await fetch(`http://localhost:8000/ticket-config/priorities/${p.id}`, {
+                                     method: "PATCH",
+                                     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                     body: JSON.stringify({ is_active: !p.is_active }),
+                                   });
+                                   if (res.ok) loadPrioritiesFromDb();
+                                 }}
+                                 style={{
+                                   width: "44px",
+                                   height: "24px",
+                                   borderRadius: "12px",
+                                   border: "none",
+                                   background: p.is_active ? "hsl(25, 95%, 53%)" : "#d1d5db",
+                                   cursor: "pointer",
+                                   position: "relative",
+                                   transition: "background 0.2s"
+                                 }}
+                               >
+                                 <span style={{
+                                   position: "absolute",
+                                   top: "2px",
+                                   left: p.is_active ? "22px" : "2px",
+                                   width: "20px",
+                                   height: "20px",
+                                   borderRadius: "50%",
+                                   background: "white",
+                                   boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                                   transition: "left 0.2s"
+                                 }} />
+                               </button>
+                             </td>
+                             <td style={{ padding: "12px 16px", textAlign: "center", verticalAlign: "middle" }}>
+                               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                                 <button
+                                   type="button"
+                                   onClick={() => {
+                                     setEditingPriorityFromDb(p);
+                                     setEditPriorityForm({
+                                       label: p.label,
+                                       color_hex: p.color_hex || "",
+                                       background_hex: p.background_hex || "",
+                                     });
+                                   }}
+                                   style={{
+                                     padding: "6px 12px",
+                                     fontSize: "13px",
+                                     fontWeight: "500",
+                                     color: "#2563eb",
+                                     background: "#eff6ff",
+                                     border: "1px solid #bfdbfe",
+                                     borderRadius: "6px",
+                                     cursor: "pointer"
+                                   }}
+                                 >
+                                   Modifier
+                                 </button>
+                                 <button
+                                   type="button"
+                                   onClick={async () => {
+                                     if (!window.confirm("Désactiver cette priorité ?")) return;
+                                     const res = await fetch(`http://localhost:8000/ticket-config/priorities/${p.id}`, {
+                                       method: "PATCH",
+                                       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                       body: JSON.stringify({ is_active: false }),
+                                     });
+                                     if (res.ok) loadPrioritiesFromDb();
+                                   }}
+                                   style={{
+                                     padding: "6px 12px",
+                                     fontSize: "13px",
+                                     fontWeight: "500",
+                                     color: "#dc2626",
+                                     background: "#fef2f2",
+                                     border: "1px solid #fecaca",
+                                     borderRadius: "6px",
+                                     cursor: "pointer"
+                                   }}
+                                 >
+                                   Supprimer
+                                 </button>
+                               </div>
+                             </td>
+                           </tr>
+                         );
+                       })}
+                     </tbody>
+                   </table>
+                 )}
+                 {!loadingPrioritiesFromDb && prioritiesFromDb.length === 0 && (
+                   <div style={{ padding: "32px", textAlign: "center", color: "#6b7280", fontSize: "14px" }}>
+                     Aucune priorité configurée en base.
+                   </div>
+                 )}
                </div>
 
-               {/* Note */}
-               <div style={{ marginTop: "24px", padding: "12px", background: "#f8f9fa", borderRadius: "4px" }}>
-                 <p style={{ margin: 0, fontSize: "14px", color: "#666", fontStyle: "italic" }}>
-                   Note : Les temps max sont utilisés pour générer des alertes
-                 </p>
-               </div>
+               {/* Modal Modifier priorité (API) */}
+               {editingPriorityFromDb && (
+                 <div
+                   style={{
+                     position: "fixed",
+                     top: 0,
+                     left: 0,
+                     right: 0,
+                     bottom: 0,
+                     background: "rgba(0,0,0,0.5)",
+                     display: "flex",
+                     alignItems: "center",
+                     justifyContent: "center",
+                     zIndex: 1000,
+                     padding: "20px",
+                   }}
+                   onClick={() => setEditingPriorityFromDb(null)}
+                 >
+                   <div
+                     onClick={(e) => e.stopPropagation()}
+                     style={{
+                       background: "white",
+                       borderRadius: "12px",
+                       width: "100%",
+                       maxWidth: "440px",
+                       boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                       padding: "24px",
+                     }}
+                   >
+                     <h2 style={{ marginBottom: "20px", fontSize: "20px", fontWeight: "600", color: "#333" }}>
+                       Modifier la priorité
+                     </h2>
+                     <div style={{ marginBottom: "16px" }}>
+                       <label style={{ display: "block", marginBottom: "6px", color: "#374151", fontWeight: "500", fontSize: "14px" }}>Libellé</label>
+                       <input
+                         type="text"
+                         value={editPriorityForm.label}
+                         onChange={(e) => setEditPriorityForm((f) => ({ ...f, label: e.target.value }))}
+                         style={{
+                           width: "100%",
+                           padding: "10px 12px",
+                           border: "1px solid #d1d5db",
+                           borderRadius: "6px",
+                           fontSize: "14px",
+                           boxSizing: "border-box",
+                         }}
+                       />
+                     </div>
+                     <div style={{ marginBottom: "16px" }}>
+                       <label style={{ display: "block", marginBottom: "6px", color: "#374151", fontWeight: "500", fontSize: "14px" }}>Couleur (hex)</label>
+                       <input
+                         type="text"
+                         value={editPriorityForm.color_hex}
+                         onChange={(e) => setEditPriorityForm((f) => ({ ...f, color_hex: e.target.value }))}
+                         placeholder="#E53E3E"
+                         style={{
+                           width: "100%",
+                           padding: "10px 12px",
+                           border: "1px solid #d1d5db",
+                           borderRadius: "6px",
+                           fontSize: "14px",
+                           boxSizing: "border-box",
+                         }}
+                       />
+                     </div>
+                     <div style={{ marginBottom: "20px" }}>
+                       <label style={{ display: "block", marginBottom: "6px", color: "#374151", fontWeight: "500", fontSize: "14px" }}>Fond (hex ou rgba)</label>
+                       <input
+                         type="text"
+                         value={editPriorityForm.background_hex}
+                         onChange={(e) => setEditPriorityForm((f) => ({ ...f, background_hex: e.target.value }))}
+                         placeholder="rgba(229, 62, 62, 0.1)"
+                         style={{
+                           width: "100%",
+                           padding: "10px 12px",
+                           border: "1px solid #d1d5db",
+                           borderRadius: "6px",
+                           fontSize: "14px",
+                           boxSizing: "border-box",
+                         }}
+                       />
+                     </div>
+                     <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                       <button
+                         type="button"
+                         onClick={() => setEditingPriorityFromDb(null)}
+                         style={{
+                           padding: "10px 18px",
+                           fontSize: "14px",
+                           color: "#6b7280",
+                           background: "#f3f4f6",
+                           border: "1px solid #e5e7eb",
+                           borderRadius: "6px",
+                           cursor: "pointer",
+                         }}
+                       >
+                         Annuler
+                       </button>
+                       <button
+                         type="button"
+                         onClick={async () => {
+                           const res = await fetch(`http://localhost:8000/ticket-config/priorities/${editingPriorityFromDb.id}`, {
+                             method: "PATCH",
+                             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                             body: JSON.stringify({
+                               label: editPriorityForm.label.trim(),
+                               color_hex: editPriorityForm.color_hex.trim() || null,
+                               background_hex: editPriorityForm.background_hex.trim() || null,
+                             }),
+                           });
+                           if (res.ok) {
+                             setEditingPriorityFromDb(null);
+                             loadPrioritiesFromDb();
+                           }
+                         }}
+                         style={{
+                           padding: "10px 18px",
+                           fontSize: "14px",
+                           fontWeight: "500",
+                           color: "white",
+                           background: "hsl(25, 95%, 53%)",
+                           border: "none",
+                           borderRadius: "6px",
+                           cursor: "pointer",
+                         }}
+                       >
+                         Enregistrer
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               )}
 
-               {/* Modal Ajouter/Modifier une priorité */}
+               {/* Modal Ajouter/Modifier une priorité (conservé pour le reste de l'app) */}
                {showAddPriorityModal && (
                  <div 
                    onClick={() => {

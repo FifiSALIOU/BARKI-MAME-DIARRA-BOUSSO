@@ -186,6 +186,15 @@ class PriorityConfig(BaseModel):
         from_attributes = True
 
 
+class PriorityUpdate(BaseModel):
+    """Schéma de mise à jour partielle d'une priorité."""
+    is_active: Optional[bool] = None
+    label: Optional[str] = None
+    color_hex: Optional[str] = None
+    background_hex: Optional[str] = None
+    display_order: Optional[int] = None
+
+
 class CommentCreate(BaseModel):
     content: str
     type: CommentType = CommentType.TECHNIQUE
