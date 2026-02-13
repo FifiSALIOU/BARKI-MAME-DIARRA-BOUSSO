@@ -3467,6 +3467,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
         setAssignmentPriority(activePrioritiesForAssign.length > 0 ? activePrioritiesForAssign[0].code : "moyenne");
         setShowAssignModal(false);
         setAssignModalTicketId(null);
+        if (ticketDetails && String(ticketDetails.id) === String(ticketId)) await loadTicketDetails(ticketId);
         alert("Ticket assigné avec succès");
       } else {
         let errorMessage = "Impossible d'assigner le ticket";
@@ -3568,7 +3569,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
       if (res.ok) {
         setDetailCommentText("");
         await loadTicketComments(ticketId);
-        if (ticketDetails?.id === ticketId) await loadTicketDetails(ticketId);
+        if (ticketDetails && String(ticketDetails.id) === String(ticketId)) await loadTicketDetails(ticketId);
         alert("Commentaire ajouté avec succès");
       } else {
         const error = await res.json();
@@ -3758,6 +3759,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
         setAssignmentNotes("");
         setShowReassignModal(false);
         setReassignTicketId(null);
+        if (ticketDetails && String(ticketDetails.id) === String(ticketId)) await loadTicketDetails(ticketId);
         alert("Ticket réassigné avec succès");
       } else {
         const error = await res.json();
@@ -3794,6 +3796,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
           const ticketsData = await ticketsRes.json();
           setAllTickets(ticketsData);
         }
+        if (ticketDetails && String(ticketDetails.id) === String(ticketId)) await loadTicketDetails(ticketId);
         alert("Ticket escaladé avec succès");
       } else {
         const error = await res.json();
@@ -3833,6 +3836,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
           const ticketsData = await ticketsRes.json();
           setAllTickets(ticketsData);
         }
+        if (ticketDetails && String(ticketDetails.id) === String(ticketId)) await loadTicketDetails(ticketId);
         alert("Ticket clôturé avec succès");
       } else {
         const error = await res.json();
@@ -3936,6 +3940,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
         setReopenTicketId(null);
         setRejectionReason("");
         setShowReopenModal(false);
+        if (ticketDetails && String(ticketDetails.id) === String(ticketId)) await loadTicketDetails(ticketId);
         alert("Ticket réouvert et réassigné avec succès");
       } else {
         const error = await res.json();
@@ -3977,7 +3982,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
         setValidationTicket(null);
         setValidationRejectionReason("");
         setShowValidationRejectionForm(false);
-        if (ticketDetails?.id === ticketId) await loadTicketDetails(ticketId);
+        if (ticketDetails && String(ticketDetails.id) === String(ticketId)) await loadTicketDetails(ticketId);
       } else {
         const error = await res.json();
         alert(`Erreur: ${error.detail || "Impossible de valider le ticket"}`);
