@@ -3403,7 +3403,7 @@ function DSIDashboard({ token }: DSIDashboardProps) {
       });
       if (res.ok) {
         setDetailCommentText("");
-        await loadTicketComments(ticketId);
+        await Promise.all([loadTicketComments(ticketId), loadTicketHistory(ticketId)]);
         if (ticketDetails?.id === ticketId) await loadTicketDetails(ticketId);
         alert("Commentaire ajouté avec succès");
       } else {
