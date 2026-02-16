@@ -4829,7 +4829,7 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
               color: "#111827",
               fontFamily: "system-ui, -apple-system, sans-serif"
             }}>
-              {currentActiveSection === "notifications" ? "Notifications" : currentActiveSection === "actifs" ? "Gestion des Actifs" : currentActiveSection === "types" ? "Types" : currentActiveSection === "categories" ? "Catégories" : currentActiveSection === "priorites" ? "Priorités" : "Tableau de bord"}
+              {currentActiveSection === "notifications" ? "Notifications" : currentActiveSection === "tickets" ? "Tickets" : currentActiveSection === "actifs" ? "Gestion des Actifs" : currentActiveSection === "types" ? "Types" : currentActiveSection === "categories" ? "Catégories" : currentActiveSection === "priorites" ? "Priorités" : "Tableau de bord"}
             </div>
             <div style={{ 
               fontSize: "13px", 
@@ -4839,6 +4839,8 @@ Les données détaillées seront disponibles dans une prochaine version.</pre>
             }}>
               {currentActiveSection === "notifications"
                 ? `${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
+                : currentActiveSection === "tickets"
+                ? "Gérez tous vos tickets"
                 : currentActiveSection === "actifs"
                 ? "Gérez l'inventaire des équipements informatiques"
                 : currentActiveSection === "types"
